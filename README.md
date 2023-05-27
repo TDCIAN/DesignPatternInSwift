@@ -15,24 +15,53 @@ Builder pattern sample code
 ```swift
 import Foundation
 
+class Field: CustomStringConvertible {
+    var type: String = ""
+    var name: String = ""
+    
+    init(called name: String, ofType type: String) {
+      self.name = name
+      self.type = type        
+    }
+    
+    public var description: String {
+        return "var \(name): \(type)"
+    }
+}
+
+class Class: CustomStringConvertible {
+    var name = ""
+    var fields = [Field]()
+    
+    public var description: String {
+        var s = ""
+        s.append("class \(name)\n{\n")
+        for f in fields {
+            s.append("  \(f)\n")
+        }
+        s.append("}\n")
+        return s
+    }
+}
+
 class CodeBuilder : CustomStringConvertible
 {
-  var result = ""
+  private var theClass = Class()
   
   init(_ rootName: String)
   {
-    result += "class \(rootName)\n{"
+    theClass.name = rootName
   }
 
   func addField(called name: String, ofType type: String) -> CodeBuilder
   {
-    result += "\n  var \(name): \(type)"
+    theClass.fields.append(Field(called: name, ofType: type))
     return self
   }
 
   public var description: String
   {
-    return result + "\n}"
+    return theClass.description
   }
 }
 ```
