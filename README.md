@@ -10,6 +10,32 @@
     - Having an object with 10 initializer arguments is not productive
     - Instead, opt for piecewise construction
     - Builder provides an API for constructing an object step-by-step
+<br></br>
+Builder pattern sample code
+```swift
+import Foundation
+
+class CodeBuilder : CustomStringConvertible
+{
+  var result = ""
+  
+  init(_ rootName: String)
+  {
+    result += "class \(rootName)\n{"
+  }
+
+  func addField(called name: String, ofType type: String) -> CodeBuilder
+  {
+    result += "\n  var \(name): \(type)"
+    return self
+  }
+
+  public var description: String
+  {
+    return result + "\n}"
+  }
+}
+```
 ###  1-2. Factories
 ####     1-2-1. Abstract Factory
 ####     1-2-2. Factory Method
