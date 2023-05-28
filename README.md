@@ -204,8 +204,198 @@ Singleton pattern summary
 <br></br>
 ##  2. Structural
 ###   2-1. Adapter
+    - We cannot modify our gadgets to support every possible interface
+    - Thus, we use ad special device(an adapter) to give us the interface we require from the interface we have
+    - A construct which adapts an existing interface X to conform to the required interface Y.
+<br></br>
+Adapter pattern sample code
+```swift
+import Foundation
+
+class Square
+{
+  var side = 0
+
+  init(side: Int)
+  {
+    self.side = side
+  }
+}
+
+protocol Rectangle
+{
+  var width: Int { get }
+  var height: Int { get }
+}
+
+extension Rectangle
+{
+  var area: Int
+  {
+    return self.width * self.height
+  }
+}
+
+class SquareToRectangleAdapter : Rectangle
+{
+  private let square: Square
+  
+  init(_ square: Square)
+  {
+    self.square = square
+  }
+
+  var width: Int {
+      return square.side
+  }
+  var height: Int {
+      return square.side
+  }
+}
+```
+<br></br>
+Adapter pattern summary
+- Implementing an Adapter is easy
+- Determine the API you have and the API you need
+- Create a component which aggregates(has a reference to, ...) the adaptee
+- Intermediate representations can pile up: use caching and other optimizations
+<br></br>
 ###   2-2. Bridge
+    - We cannot modify our gadgets to support every possible interface
+    - Thus, we use ad special device(an adapter) to give us the interface we require from the interface we have
+    - A construct which adapts an existing interface X to conform to the required interface Y.
+<br></br>
+Bridge pattern sample code
+```swift
+import Foundation
+
+protocol Renderer
+{
+  var whatToRenderAs: String { get }
+}
+
+class Shape : CustomStringConvertible
+{
+  private let renderer: Renderer
+
+  init(_ renderer: Renderer)
+  {
+    self.renderer = renderer
+  }
+
+  var name: String = ""
+
+  var description: String
+  {
+    return "Drawing \(name) as \(renderer.whatToRenderAs)"
+  }
+}
+
+class Triangle : Shape
+{
+  override init(_ renderer: Renderer)
+  {
+    super.init(renderer)
+    name = "Triangle"
+  }
+}
+
+class Square : Shape
+{
+  override init(_ renderer: Renderer)
+  {
+    super.init(renderer)
+    name = "Square"
+  }
+}
+
+class RasterRenderer : Renderer
+{
+  var whatToRenderAs: String {
+    return "pixels"
+  }
+}
+
+class VectorRenderer : Renderer
+{
+  var whatToRenderAs: String
+  {
+    return "lines"
+  }
+}
+```
+<br></br>
+Bridge pattern summary
+- Decouple abstraction from implementation
+- Both can exist as hierarchies
+- A stronger form of encapsulation
+<br></br>
 ###   2-3. Composite
+    - Objects use other objects' properties/members through inheritance and composition
+    - Composition lets us make compound objects
+      - E.g., a mathematical expression composed of simple expressions; or
+      - A grouping of shapes that consist of several shapes
+    - Composite design pattern is used to treat both single(scalar) and composite objects uniformly
+      - I.e., Foo and Sequence (yielding Foo's) have common APIs
+    - A mechanism for treating individual(scalar) objects and compositions of objects in a uniform manner
+<br></br>
+Composite pattern sample code
+```swift
+import Foundation
+
+class SingleValue : Sequence
+{
+  var value = 0
+
+  init() {}
+  init(_ value: Int)
+  {
+    self.value = value
+  }
+
+  func makeIterator() -> IndexingIterator<Array<Int>>
+  {
+    return IndexingIterator(_elements: [value])
+  }
+}
+
+class ManyValues : Sequence
+{
+  var values = [Int]()
+
+  func makeIterator() -> IndexingIterator<Array<Int>>
+  {
+    return IndexingIterator(_elements: values)
+  }
+
+  func add(_ value: Int)
+  {
+    values.append(value)
+  }
+}
+
+extension Sequence where Iterator.Element: Sequence, Iterator.Element.Iterator.Element == Int
+{
+  func sum() -> Int
+  {
+    var result = 0
+    for c in self {
+        for i in c {
+            result += i
+        }
+    }
+    return result
+  }
+}
+```
+<br></br>
+Composite pattern summary
+- Objects can use other objects via inheritance/composition
+- Some composed and singular objects need similar/identical behaviors
+- Composite design pattern lets us treat both types of objects uniformly
+- Swift has special support for the sequence concept
+- A single object can masquerade as a collection with an iterator that uses [self]
+<br></br>
 ###   2-4. Decorator
 ###   2-5. Facade
 ###   2-6. Flyweight
