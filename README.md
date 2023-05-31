@@ -397,6 +397,72 @@ Composite pattern summary
 - A single object can masquerade as a collection with an iterator that uses [self]
 <br></br>
 ###   2-4. Decorator
+    - Want to augment an object with additional functionality
+    - Do not want to rewrite or alter existing code (OCP)
+    - Want to keep new functionality separate (SRP)
+    - Need to be able to interact with existing structures
+    - Two options:
+      - Inherit from required object if possible; some objects are final
+      - Build a Decorator, which simply references the decorated object(s)
+    - Facilitates the addition of behaviors to individual objects without inheriting from them.
+<br></br>
+Decorator pattern sample code
+```swift
+import Foundation
+
+class Bird
+{
+  var age = 0
+
+  func fly() -> String
+  {
+    return (age < 10) ? "flying" : "too old"
+  }
+}
+
+class Lizard
+{
+  var age = 0
+
+  func crawl() -> String
+  {
+    return (age > 1) ? "crawling" : "too young"
+  }
+}
+
+class Dragon
+{
+  private var _age = 0
+  private let bird = Bird()
+  private let lizard  = Lizard()
+
+  var age: Int {
+    get { 
+        return _age 
+    }
+    set(value) {
+        bird.age = value
+        lizard.age = value
+        _age = value
+    }
+  }
+  func fly() -> String { 
+    return bird.fly()
+  }
+  func crawl() -> String { 
+    return lizard.crawl()
+  }
+}
+```
+<br></br>
+Decorator pattern summary
+- A decorator keeps reference to the decorated object(s)
+- May or may not proxy over calls
+  - Functions, operators, etc.
+- Exists in a static variation
+  - X<Y<Foo>>
+  - Very limited due to inability to inherit initializers from type parameters
+<br></br>
 ###   2-5. Facade
 ###   2-6. Flyweight
 ###   2-7. Proxy
