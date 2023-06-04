@@ -591,6 +591,134 @@ Facade pattern summary
 - May allow users to 'escalate' to use more complex APIs if they need to
 <br></br>
 ###   2-6. Flyweight
+    - Acoid redundancy when storing data
+    - E.g., MMORPG
+      - Plenty of users with identical first/last names
+      - No sense in storing same first/last name over and over again
+      - Store a list of names and pointers to them
+    - String interning would not help
+    - E.g., bold or italic text in the console
+      - Don't want each character to have a formatting character
+      - Operater on ranges (e.g., line number, start/end positions)
+    - A space optimization technique that lets us use less memory by storing externally the data associated with similar objects.
+<br></br>
+Flyweight pattern sample code
+```swift
+import Foundation
+
+class Generator
+{
+  func generate(_ count: Int) -> [Int]
+  {
+    var result = [Int]()
+    for _ in 1...count
+    {
+      result.append(1 + random()%9)
+    }
+    return result
+  }
+}
+
+class Splitter
+{
+  func split(_ array: [[Int]]) -> [[Int]]
+  {
+    var result = [[Int]]()
+    
+    let rowCount = array.count
+    let colCount = array[0].count
+
+    // get the rows
+    for r in 0..<rowCount
+    {
+      var theRow = [Int]()
+      for c in 0..<colCount
+      {
+        theRow.append(array[r][c])
+      }
+      result.append(theRow)
+    }
+
+    // get the columns
+    for c in 0..<colCount
+    {
+      var theCol = [Int]()
+      for r in 0..<rowCount
+      {
+        theCol.append(array[r][c])
+      }
+      result.append(theCol)
+    }
+
+    // get the diagonals
+    var diag1 = [Int]()
+    var diag2 = [Int]()
+    for c in 0..<colCount
+    {
+      for r in 0..<rowCount
+      {
+        if c == r
+        {
+          diag1.append(array[r][c])
+        }
+        let r2 = rowCount - r - 1
+        if c == r2
+        {
+          diag2.append(array[r][c])
+        }
+      }
+    }
+
+    result.append(diag1)
+    result.append(diag2)
+
+    return result
+  }
+}
+
+class Verifier
+{
+  func verify(_ arrays: [[Int]]) -> Bool
+  {
+    let first = arrays[0].reduce(0, +)
+    for arr in 1..<arrays.count
+    {
+      if (arrays[arr].reduce(0, +)) != first
+      {
+        return false
+      }
+    } 
+    return true
+  }
+}
+
+class MagicSquareGenerator
+{
+  func generate(_ size: Int) -> [[Int]]
+  {
+    let g = Generator()
+    let s = Splitter()
+    let v = Verifier()
+
+    var square: [[Int]]
+    repeat 
+    {
+      square = [[Int]]() 
+      for _ in 1...size
+      {
+        square.append(g.generate(size))
+      }
+    } while !v.verify(s.split(square))
+    return square
+  }
+}
+```
+<br></br>
+Flyweight pattern summary
+- Build a Facade to provide a simplified API over a set of classes
+- May wish to (optionally) expose internals through the facade
+- May allow users to 'escalate' to use more complex APIs if they need to
+<br></br>
 ###   2-7. Proxy
 <br></br>
 ##  3. Behavioral
