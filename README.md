@@ -591,7 +591,7 @@ Facade pattern summary
 - May allow users to 'escalate' to use more complex APIs if they need to
 <br></br>
 ###   2-6. Flyweight
-    - Acoid redundancy when storing data
+    - Avoid redundancy when storing data
     - E.g., MMORPG
       - Plenty of users with identical first/last names
       - No sense in storing same first/last name over and over again
@@ -656,6 +656,69 @@ Flyweight pattern summary
 - Define the idea of 'ranges' on homogeneous collections and store data related to those ranges
 <br></br>
 ###   2-7. Proxy
+    - You are calling foo.Bar()
+    - This assumes that foo is in the same process as Bar()
+    - What if, later on, you want to put all Foo-related operations into a separate process
+      - Can you avoid changing your code?
+    - Proxy to the rescue!
+      - Same interface, entirely different behavior
+    - This is called a communication proxy
+      - Other types: logging, virtual, guarding
+    - Proxy is a class that functions as an interface to a particular resource. That resource may be remote, expensive to construct, or may require logging or some other added functionality.
+<br></br>
+Proxy pattern sample code
+```swift
+import Foundation
+
+class Sentence : CustomStringConvertible
+{
+  var words: [String]
+  var tokens = [Int: WordToken]()
+  
+  init(_ plainText: String) {
+    words = plainText.components(separatedBy: " ")
+  }
+
+  subscript(index: Int) -> WordToken {
+    get {
+        let wordToken = WordToken()
+        tokens[index] = wordToken
+        return tokens[index]!
+    }
+  }
+
+  var description: String {
+    var ws = [String]()
+    for i in 0..<words.count {
+        var w = words[i]
+        if let item = tokens[i] {
+            if item.capitalize {
+                w = w.uppercased()
+            }
+        }
+        ws.append(w)
+    }
+    return ws.joined(separator: " ")
+  }
+
+  class WordToken
+  {
+    var capitalize: Bool = false
+    
+    init() {
+        
+    }
+    init(capitalize: Bool) {
+        self.capitalize = capitalize
+    }
+  }
+}
+```
+<br></br>
+Proxy pattern summary
+- Store common data externally
+- Define the idea of 'ranges' on homogeneous collections and store data related to those ranges
+<br></br>
 <br></br>
 ##  3. Behavioral
 ###   3-1. Chain of Responsibility
