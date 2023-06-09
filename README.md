@@ -666,58 +666,72 @@ Flyweight pattern summary
       - Other types: logging, virtual, guarding
     - Proxy is a class that functions as an interface to a particular resource. That resource may be remote, expensive to construct, or may require logging or some other added functionality.
 <br></br>
+Proxy vs. Decorator
+- Proxy provides an identical interface; decorator provides an enhanced interface
+- Decorator typically aggregates (or has reference to) what it is decorating; proxy doesn't have to
+- Proxy might not even be working with a materialized object
+<br></br>
 Proxy pattern sample code
 ```swift
-import Foundation
-
-class Sentence : CustomStringConvertible
+class Person
 {
-  var words: [String]
-  var tokens = [Int: WordToken]()
-  
-  init(_ plainText: String) {
-    words = plainText.components(separatedBy: " ")
-  }
+  var age: Int = 0
 
-  subscript(index: Int) -> WordToken {
-    get {
-        let wordToken = WordToken()
-        tokens[index] = wordToken
-        return tokens[index]!
-    }
-  }
-
-  var description: String {
-    var ws = [String]()
-    for i in 0..<words.count {
-        var w = words[i]
-        if let item = tokens[i] {
-            if item.capitalize {
-                w = w.uppercased()
-            }
-        }
-        ws.append(w)
-    }
-    return ws.joined(separator: " ")
-  }
-
-  class WordToken
+  func drink() -> String
   {
-    var capitalize: Bool = false
-    
-    init() {
-        
-    }
-    init(capitalize: Bool) {
-        self.capitalize = capitalize
-    }
+    return "drinking"
+  }
+
+  func drive() -> String
+  {
+    return "driving"
+  }
+
+  func drinkAndDrive() -> String
+  {
+    return "driving while drunk"
+  }
+}
+
+class ResponsiblePerson
+{
+  private let person: Person
+
+  init(person: Person)
+  {
+    self.person = person
+  }
+
+  var age: Int {
+      get {
+          return person.age
+      }
+      set(newValue) {
+          self.person.age = newValue
+      }
+  }
+  func drink() -> String
+  {
+    return age >= 18 ? person.drink() : "too young"
+  }
+
+  func drive() -> String
+  {
+    return age >= 16 ? person.drive() : "too young"
+  }
+
+  func drinkAndDrive() -> String
+  {
+    return "dead"
   }
 }
 ```
 <br></br>
 Proxy pattern summary
-- Store common data externally
-- Define the idea of 'ranges' on homogeneous collections and store data related to those ranges
+- A proxy has the same interface as the underlying object
+- To create a proxy, simply replicate the existing interface of an object
+- Add relevant functionality to the redefined member functions
+- Different proxies (communication, logging, caching, etc.) have completely different behaviors
 <br></br>
 <br></br>
 ##  3. Behavioral
