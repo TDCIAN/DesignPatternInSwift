@@ -736,6 +736,152 @@ Proxy pattern summary
 <br></br>
 ##  3. Behavioral
 ###   3-1. Chain of Responsibility
+    - Unethical behavior by an employee; who takes the blame?
+      - Employee
+      - Manager
+      - CEO
+    - You click a graphical element on a form
+      - Button handles it, stops further processing
+      - Underlying group box
+      - Underlying window
+    - CCG computer game
+      - creature has attck and defense values
+      - Those can be boosted by other cords
+    - A chain of components who all get a chance to process a command or a query, optionally having default processing implementation and an ability to terminate the processing chain.
+    
+<br></br>
+Chain of responsibility sample code
+```swift
+import Foundation
+
+class Creature
+{
+  let game: Game
+  let baseAttack: Int
+  let baseDefense: Int
+
+  internal init(game: Game, baseAttack: Int, baseDefense: Int)
+  {
+    self.game = game
+    self.baseAttack = baseAttack
+    self.baseDefense = baseDefense
+  }
+
+  // the rest of the members are typically 'abstract'
+  var attack: Int
+  {
+    get { return baseAttack }
+  }
+
+  var defense: Int
+  {
+    get { return baseDefense }
+  }
+
+  func query(_ source: AnyObject, _ sq: StatQuery) {}
+}
+
+class Goblin : Creature
+{
+  override func query(_ source: AnyObject, _ sq: StatQuery)
+  {
+    if (source === self)
+    {
+      switch sq.statistic
+      {
+        case .attack: sq.result += baseAttack
+        case .defense: sq.result += baseDefense
+      }
+    }
+    else
+    {
+      // a Goblin gets +1 def for every other goblin in play
+      if (sq.statistic == .defense)
+      {
+        sq.result += 1
+      }
+    }
+  }
+
+  override var defense: Int
+  {
+    get {
+      let q = StatQuery(.defense)
+      for c in game.creatures
+      {
+        c.query(self, q)
+      }
+      return q.result
+    }
+  }
+
+  override var attack: Int
+  {
+    get
+    {
+      let q = StatQuery(.attack)
+      for c in game.creatures
+      {
+        c.query(self, q)
+      }
+      return q.result
+    }
+  }
+
+  convenience init(game: Game)
+  {
+    self.init(game: game, baseAttack: 1, baseDefense: 1)
+  }
+}
+
+class GoblinKing : Goblin
+{
+  init(game: Game)
+  {
+    super.init(game: game, baseAttack: 3, baseDefense: 3)
+  }
+
+  override func query(_ source: AnyObject, _ sq: StatQuery)
+  {
+    // gives every _other_ goblin +1 attack
+    if (source !== self && sq.statistic == .attack)
+    {
+      sq.result += 1
+    } else {
+      // the king is also a goblin, so...
+      super.query(source, sq)
+    }
+  }
+}
+
+enum Statistic
+{
+  case attack
+  case defense
+}
+
+class StatQuery
+{
+  var statistic: Statistic
+  var result: Int = 0
+
+  init(_ statistic: Statistic)
+  {
+    self.statistic = statistic
+  }
+}
+
+class Game
+{
+  var creatures = [Creature]()
+}
+```
+<br></br>
+Chain of responsibility summary
+- Chain of Responsibility can be implemented as a chain of references or a centralized construct
+- Enlist objects in the chain, possibly controlling their order
+- Object removal from chain (e.g., in dispose())
+<br></br>
 ###   3-2. Command
 ###   3-3. Interpreter
 ###   3-4. Iterator
