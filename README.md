@@ -883,13 +883,1105 @@ Chain of responsibility summary
 - Object removal from chain (e.g., in dispose())
 <br></br>
 ###   3-2. Command
+    - Ordinary statements are perishable
+      - Cannot undo a property assignment
+      - Cannot directly serialize a sequence of actions (calls)
+    - What an object that represents an operation
+      - X should change its property y to z
+      - X should do w()
+    - Uses: GUI commands, multi-level undo/redo, macro recording and more!
+    - An object which represents an instruction to perform a particular action. Contains all the information necessary for the action to be taken.
+    
+<br></br>
+Command sample code
+```swift
+import Foundation
+
+class Creature
+{
+  let game: Game
+  let baseAttack: Int
+  let baseDefense: Int
+
+  internal init(game: Game, baseAttack: Int, baseDefense: Int)
+  {
+    self.game = game
+    self.baseAttack = baseAttack
+    self.baseDefense = baseDefense
+  }
+
+  // the rest of the members are typically 'abstract'
+  var attack: Int
+  {
+    get { return baseAttack }
+  }
+
+  var defense: Int
+  {
+    get { return baseDefense }
+  }
+
+  func query(_ source: AnyObject, _ sq: StatQuery) {}
+}
+
+class Goblin : Creature
+{
+  override func query(_ source: AnyObject, _ sq: StatQuery)
+  {
+    if (source === self)
+    {
+      switch sq.statistic
+      {
+        case .attack: sq.result += baseAttack
+        case .defense: sq.result += baseDefense
+      }
+    }
+    else
+    {
+      // a Goblin gets +1 def for every other goblin in play
+      if (sq.statistic == .defense)
+      {
+        sq.result += 1
+      }
+    }
+  }
+
+  override varclass Command
+{
+  enum Action
+  {
+    case deposit
+    case withdraw
+  }
+
+  var action: Action
+  var amount: Int
+  var success = false
+
+  init(_ action: Action, _ amount: Int)
+  {
+    self.action = action
+    self.amount = amount
+  }
+}
+
+class Account
+{
+  var balance = 0
+
+  func process(_ c: Command)
+  {
+    switch c.action {
+        case .deposit:
+            balance += c.amount
+            c.success = true
+        case .withdraw:
+            if balance - c.amount >= 0 {
+                balance -= c.amount
+                c.success = true
+            } else {
+                c.success = false
+            }
+    }
+  }
+}
+```
+<br></br>
+Command summary
+- Encapsulate all details of an operation in a separate object
+- Define instruction for applying the command (either in the command itself, or elsewhere)
+- Optionally define instructions for undoing the command
+- Can create composite commands (a.k.a. macros)
+<br></br>
 ###   3-3. Interpreter
+    - Textual input needs to be processed
+      - E.g., turned into OOP structures
+    - Some examples
+      - Programming laungage compilers, interpreters and IDEs
+      - HTML, XML and similar
+      - Numeric expressions (3+4/5)
+      - Regular expressions
+    - Turning strings into OOP based structures in a complicated process
+    - A component that processes structured text data. Does so by turning it into separate lexical tokens(lexing) and then interpreting sequences of said tokens(parsing).
+<br></br>
+Interpreter sample code
+```swift
+import Foundation
+
+extension String
+{
+  func ranges(of string: String, options: CompareOptions = .literal) -> [Range<Index>]
+  {
+    var result: [Range<Index>] = []
+    var start = startIndex
+    while let range = range(of: string, options: options, range: start..<endIndex)
+    {
+      result.append(range)
+      start = range.upperBound
+    }
+    return result
+  }
+
+  subscript (i: Int) -> Character {
+    return self[index(startIndex, offsetBy: i)]
+  }
+
+  subscript (i: Int) -> String {
+    return String(self[i] as Character)
+  }
+
+  subscript (r: Range<Int>) -> String {
+    let start = index(startIndex, offsetBy: r.lowerBound)
+    let end = index(startIndex, offsetBy: r.upperBound)
+    return self[Range(start ..< end)]
+  }
+}
+
+class ExpressionProcessor
+{
+  var variables = [Character:Int]()
+
+  enum NextOp
+  {
+    case nothing
+    case plus
+    case minus
+  }
+  
+  func calculate(_ expression: String) -> Int
+  {
+    var current = 0
+    var nextOp = NextOp.nothing
+
+    var parts = [String]()
+    var buffer = ""
+
+    // regex lookbehind in swift is broken, so we split the strings by hand
+    for c in expression.characters
+    {
+      buffer.append(c)
+      if (c == "+" || c == "-")
+      {
+        parts.append(buffer)
+        buffer = ""
+      }
+    }
+    if !buffer.isEmpty { parts.append(buffer) }
+
+    for part in parts
+    {
+      var noOp = part.characters.split { ["+", "-"]
+        .contains(String($0)) }
+      var value = 0
+      var first = String(noOp[0])
+
+      if let z = Int(first)
+      {
+        value = z
+      }
+      else if (first.utf8.count == 1 && variables[first[0]] != nil)
+      {
+        value = variables[first[0]]!
+      }
+      else
+      {
+        return 0
+      }
+
+      switch nextOp
+      {
+        case .nothing:
+          current = value
+        case .plus:
+          current += value
+        case .minus:
+          current -= value
+      }
+
+      if part.hasSuffix("+")
+      {
+        nextOp = .plus
+      }
+      else if part.hasSuffix("-")
+      {
+        nextOp = .minus
+      }
+    }
+
+    return current
+  }
+}
+```
+<br></br>
+Interpreter summary
+- Barring simple cases, an interpreter acts in two stages
+- Lexing turns text into a set of tokens
+- Parsing tokens into meaningful constructs
+- Parsed data can then be traversed
+<br></br>
 ###   3-4. Iterator
+    - Iteration(traversal) is a core functionality of various data structures
+    - An iterator is a class that facilitates the traversal
+      - Keeps a reference to the current element
+      - Knows how to move t a differnt element
+    - Iterator is an implicit construct
+      - for x in y: no obvious iterator construction
+    - An object(or a method) that facilitates the traversal of a data structure.
+<br></br>
+Iterator sample code
+```swift
+import Foundation
+
+class Node<T>
+{
+  let value: T
+  var left: Node<T>? = nil
+  var right: Node<T>? = nil
+  var parent: Node<T>? = nil
+
+  init(_ value: T)
+  {
+    self.value = value
+  }
+
+  init(_ value: T, _ left: Node<T>, _ right: Node<T>)
+  {
+    self.value = value
+    self.left = left
+    self.right = right
+
+    left.parent = self
+    right.parent = self
+  }
+
+  private func traverse(_ current: Node<T>, _ buffer: inout [T]) {
+      buffer.append(current.value)
+      
+      if let currentLeft = current.left {
+          traverse(currentLeft, &buffer)
+      }
+      if let currentRight = current.right {
+          traverse(currentRight, &buffer)
+      }
+  }
+  
+  public var preOrder: [T]
+  {
+    get {
+        var buffer = [T]()
+        traverse(self, &buffer)
+        return buffer
+    }
+  }
+}
+```
+<br></br>
+Iterator summary
+- An iterator specified how you can traverse an object
+- An iterator object, unlike a method, cannot be recursive
+- Return an iterator from a Sequence and you can use your object in a for loop
+<br></br>
 ###   3-5. Mediator
+    - Components may go in and out of a system at any time
+      - Chat room participants
+      - Players in an MMORPG
+    - It makes no sense for them to have direct references to one another
+      - Those references may go dead
+    - Solution: have them all refer to some central component that facilitates communication
+    - A component that facilitates communication between other components without them necessarily being aware of each other or having direct(reference) access to each other
+<br></br>
+Mediator sample code
+```swift
+public protocol Disposable
+{
+  func dispose()
+}
+
+protocol Invocable : class
+{
+  func invoke(_ data: Any)
+}
+
+public class Event<T>
+{
+  public typealias EventHandler = (T) -> ()
+
+  var eventHandlers = [Invocable]()
+
+  public func raise(_ data: T)
+  {
+    for handler in self.eventHandlers
+    {
+      handler.invoke(data)
+    }
+  }
+
+  public func addHandler<U: AnyObject>
+    (target: U, handler: @escaping (U) -> EventHandler) -> Disposable
+  {
+    let subscription = Subscription(target: target, handler: handler, event: self)
+    eventHandlers.append(subscription)
+    return subscription
+  }
+}
+
+class Subscription<T: AnyObject, U> : Invocable, Disposable
+{
+  weak var target: T?
+  let handler: (T) -> (U) -> ()
+  let event: Event<U>
+
+  init(target: T?, handler: @escaping (T) -> (U) -> (), event: Event<U>)
+  {
+    self.target = target
+    self.handler = handler
+    self.event = event
+  }
+
+  func invoke(_ data: Any) {
+    if let t = target {
+      handler(t)(data as! U)
+    }
+  }
+
+  func dispose()
+  {
+    event.eventHandlers = event.eventHandlers.filter { $0 as AnyObject? !== self }
+  }
+}
+
+class Participant
+{
+  private let mediator: Mediator
+  var value = 0
+
+  init(_ mediator: Mediator)
+  {
+    self.mediator = mediator
+    mediator.alert.addHandler(
+      target: self,
+      handler: {
+        (_) -> ((AnyObject, Int)) -> () in
+        return self.alert
+      }
+    )
+  }
+
+  func alert(_ data: (AnyObject, Int))
+  {
+    if (data.0 !== self)
+    {
+      value += data.1
+    }
+  }
+
+  func say(_ n: Int)
+  {
+    mediator.broadcast(self, n)
+  }
+}
+
+class Mediator
+{
+  let alert = Event<(AnyObject, Int)>()
+
+  func broadcast(_ sender: AnyObject, _ n: Int)
+  {
+    alert.raise(sender, n)
+  }
+}
+```
+<br></br>
+Mediator summary
+- Create the mediator and have each object in the system refer to it
+  - E.g., in a property
+- Mediator engages in bidirectional communication with its connected components
+- Mediator has functions the components can call
+- Components have functions the mediator can call
+- Event processing (e.g., Rx) libraries make communication easier to implement
+<br></br>
 ###   3-6. Memento
+    - An object or system goes through changes
+      - E.g., a bank account gets deposits and withdrawls
+    - There are different ways of navigating those changes
+    - One way is to record every change(Command) and teach a command to 'undo' itself
+    - Another is to simply save snapshots of the system(Memento)
+    - A token/handle representing the system state. Lets us roll back to the state when the token was generated. May or may not directly expose state information.
+<br></br>
+Memento sample code
+```swift
+import Foundation
+
+class Token
+{
+  var value = 0
+  init(_ value: Int)
+  {
+    self.value = value
+  }
+  init(copyFrom other: Token)
+  {
+    self.value = other.value
+  }
+  static func ==(_ lhs: Token, _ rhs: Token) -> Bool
+  {
+    return lhs.value == rhs.value
+  }
+}
+
+class Memento
+{
+  var tokens = [Token]()
+}
+
+class TokenMachine
+{
+  var tokens = [Token]()
+
+  func addToken(_ value: Int) -> Memento
+  {
+    tokens.append(Token(value))
+    let m = Memento()
+    m.tokens = tokens.map{Token(copyFrom: $0)}
+    return m
+  }
+
+  func addToken(_ token: Token) -> Memento
+  {
+    tokens.append(token)
+    let m = Memento()
+    m.tokens = tokens.map{Token(copyFrom: $0)}
+    return m
+  }
+
+  func revert(to m: Memento)
+  {
+    tokens = m.tokens.map{ Token(copyFrom: $0) }
+  }
+}
+```
+<br></br>
+Memento summary
+- Mementos are used to roll back states arbitrarily
+- A memento is simply a token/handle class with(typically) no functions of its own
+- A memento is not required to expose directly the state(s) to which it reverts the system
+- Can be used to implement undo/redo
+<br></br>
 ###   3-7. Null Object
+    - When component A uses component B, it typically assumes that B is not nil
+      - You inject B, not B? or some Option<B>
+      - You do not check for nil (?.) on every call
+    - There is no option of telling A not to use an instance of B
+      - Its use is hard-coded
+    - Thus, we build a no-op, non-functioning inheritor of B and pass it into A
+    - A no-op object that conforms to the required interface, satisfying a dependency requirement of some other object.
+<br></br>
+Null Object sample code
+```swift
+protocol Log
+{
+  var recordLimit: Int { get }
+  var recordCount: Int { get set }
+  func logInfo(_ message: String)
+}
+
+enum LogError : Error
+{
+  case recordNotUpdated
+  case logSpaceExceeded
+}
+
+class Account
+{
+  private var log: Log
+
+  init(_ log: Log)
+  {
+    self.log = log
+  }
+
+  func someOperation() throws
+  {
+    let c = log.recordCount
+    log.logInfo("Performing an operation")
+    if (c+1) != log.recordCount
+    {
+      throw LogError.recordNotUpdated
+    }
+    if log.recordCount >= log.recordLimit
+    {
+      throw LogError.logSpaceExceeded
+    }
+  }
+}
+
+class NullLog : Log
+{
+  var recordLimit: Int
+  {
+    return Int.max
+  }
+  var recordCount: Int = Int.min
+  func logInfo(_ message: String)
+  {
+    recordCount += 1
+  }
+}
+```
+<br></br>
+Null Object summary
+- Implement the required interface
+- Rewrite the methods with empty bodies
+  - If method is non-void, return default
+  - If these values are ever used, you are in trouble
+- Supply an instance of Null Object in place of actual object
+<br></br>
 ###   3-8. Observer
+    - We need to be informed when certain things happen
+      - Object's property changes
+      - Object does something
+      - Some external event occurs
+    - We want to listen to events and notified when they occur
+    - Built into Swift for properties only
+    - An observer is an object that wishes to be informed about events happening in the system. The entity generating the events is an observable.
+<br></br>
+Observer sample code
+```swift
+import Foundation
+
+protocol Invocable : class
+{
+  func invoke(_ data: Any)
+}
+
+public protocol Disposable
+{
+  func dispose()
+}
+
+public class Event<T>
+{
+  public typealias EventHandler = (T) -> ()
+
+  var eventHandlers = [Invocable]()
+
+  public func raise(_ data: T)
+  {
+    for handler in self.eventHandlers
+    {
+      handler.invoke(data)
+    }
+  }
+
+  public func addHandler<U: AnyObject>
+    (target: U, handler: @escaping (U) -> EventHandler) -> Disposable
+  {
+    let subscription = Subscription(target: target, handler: handler, event: self)
+    eventHandlers.append(subscription)
+    return subscription
+  }
+}
+
+class Subscription<T: AnyObject, U> : Invocable, Disposable
+{
+  weak var target: T?
+  let handler: (T) -> (U) -> ()
+  let event: Event<U>
+
+  init(target: T?, handler: @escaping (T) -> (U) -> (), event: Event<U>)
+  {
+    self.target = target
+    self.handler = handler
+    self.event = event
+  }
+
+  func invoke(_ data: Any) {
+    if let t = target {
+      handler(t)(data as! U)
+    }
+  }
+
+  func dispose()
+  {
+    event.eventHandlers = event.eventHandlers.filter { $0 as AnyObject? !== self }
+  }
+}
+
+class Game
+{
+  var ratEnters = Event<AnyObject>()
+  var ratDies   = Event<AnyObject>()
+  var notifyRat = Event<(AnyObject,Rat)>()
+
+  func fireRatEnters(_ sender: AnyObject)
+  {
+    ratEnters.raise(sender)
+  }
+
+  func fireRatDies(_ sender: AnyObject)
+  {
+    ratDies.raise(sender)
+  }
+
+  func fireNotifyRat(_ sender: AnyObject, _ whichRat: Rat)
+  {
+    notifyRat.raise(sender, whichRat)
+  }
+}
+
+class Rat
+{
+  private let game: Game
+  var attack = 1
+
+  init(_ game: Game)
+  {
+        self.game = game
+
+    game.ratEnters.addHandler(
+      target: self,
+      handler: {
+        (_) -> ((AnyObject)) -> () in
+        return {
+          if $0 !== self
+          {
+            self.attack += 1
+            game.fireNotifyRat(self, $0 as! Rat)
+          }
+        }
+      }
+    )
+
+    game.ratDies.addHandler(
+      target: self,
+      handler: {
+        (_) -> ((AnyObject)) -> () in
+        return {
+          if $0 !== self
+          {
+            self.attack -= 1
+          }
+        }
+      }
+    )
+
+    game.notifyRat.addHandler(
+      target: self,
+      handler: {
+        (_) -> ((AnyObject, Rat)) -> () in
+        return {
+          if $1 === self
+          {
+            self.attack += 1
+          }
+        }
+      }
+    )
+
+    game.fireRatEnters(self)
+  }
+
+  func kill() {
+    game.fireRatDies(self)
+  }
+}
+```
+<br></br>
+Observer summary
+- Observer is an intrusive approach: an observable must provide an event to subscribe to
+- Special care must be taken to prevent issues in multithreaded scenarios
+- Observer/Observable concepts are used in stream processing(Reactive Extensions)
+<br></br>
 ###   3-9. State
+    - Consider an ordinary telephone
+    - What you do with it depends on the state of the phone/line
+      - If it's ringing or you want to make a call, you can pick up
+      - Phone must be off the hook to talk/make a call
+      - If you try calling someone, and it's busy, you put the handset down
+    - Changes in state can be explicit or in response to event(Observer pattern)
+    - A pattern in which the object's behavior is determined by its state. An object ransitions from one state to another(something needs to trigger a transition).
+    - A formalized construct which manages state and transitions is called a state machine
+<br></br>
+State sample code
+```swift
+import Foundation
+import XCTest
+
+class CombinationLock
+{
+  private let combination: [Int]
+  var status = ""
+  private var digitsEntered = 0
+  private var failed = false
+
+  init(_ combination: [Int])
+  {
+    self.combination = combination
+    reset()
+  }
+
+  private func reset()
+  {
+    status = "LOCKED"
+    digitsEntered = 0
+    failed = false
+  }
+
+  func enterDigit(_ digit: Int)
+  {
+    if (status == "LOCKED") { 
+      status = "" 
+    }
+    status += String(digit)
+    if combination[digitsEntered] != digit
+    {
+      failed = true
+    }
+    digitsEntered += 1
+
+    if digitsEntered == combination.count
+    {
+      status = (failed ? "ERROR" : "OPEN")
+    }
+  }
+}
+```
+<br></br>
+State summary
+- Give sufficient complexity, it pays to formally define possible states and events/triggers
+- Can define
+  - State entry/exit behaviors
+  - Action when a particular event causes a transition
+  - Guard conditions enabling/disabling a transition
+<br></br>
 ###   3-10. Strategy
+    - Many algorithms can be decomposed into higher-and lower-level parts
+    - Making tea can be decomposed into
+      - The process of making a hot beverage(boil water, pour into cup); and
+      - Tea-specific things(put teabag into water)
+    - The high-level algorithm can then be reused for making coffee or hot chocolate
+      - Supported by beverage-specific strategies
+    - Enables the exact behavior of a system to be selected either at run-time(dynamic) or compile-time(static)
+    - Also known as a policy(esp. in the C++ world).
+<br></br>
+Strategy sample code
+```swift
+import Foundation
+import XCTest
+
+protocol DiscriminantStrategy
+{
+  func calculateDiscriminant(_ a: Double, _ b: Double, _ c: Double) -> Double
+}
+
+class OrdinaryDiscriminantStrategy : DiscriminantStrategy
+{
+  func calculateDiscriminant(_ a: Double, _ b: Double, _ c: Double) -> Double
+  {
+    return b*b - 4*a*c
+  }
+}
+
+class RealDiscriminantStrategy : DiscriminantStrategy
+{
+  func calculateDiscriminant(_ a: Double, _ b: Double, _ c: Double) -> Double
+  {
+    let result = b*b - 4*a*c
+    return (result >= 0) ? result : Double.nan
+  }
+}
+
+class QuadraticEquationSolver
+{
+  private let strategy: DiscriminantStrategy
+
+  init(_ strategy: DiscriminantStrategy)
+  {
+    self.strategy = strategy
+  }
+
+  func solve(_ a: Double, _ b: Double, _ c: Double) -> (Double, Double)
+  {
+    let disc = strategy.calculateDiscriminant(a, b, c)
+    let rootDisc = sqrt(disc)
+    return ((-b + rootDisc) / (2*a), (-b - rootDisc) / (2*a))
+  }
+}
+```
+<br></br>
+Strategy summary
+- Define an algorith at a high level
+- Define the interface you expect each strategy to follow
+- Provide for either dynamic or static composition of strategy in the overall algorithm
+<br></br>
 ###   3-11. Template Method
+    - Algorithms can be decomposed into common parts + specifics
+    - Strategy pattern does this through composition
+      - High-level algorithm uses an interface
+      - Concrete implementations implement the interface
+    - Template Method does the same thing through inheritance
+      - Overall algorithm makes use of abstract member
+      - Inheritors override the abstract members
+      - Parent template method invoked
+    - Allows us to define the 'skeleton' of the algorithm, which concrete implementations defined in subclasses.
+<br></br>
+Template sample code
+```swift
+class Creature
+{
+  public var attack, health: Int
+
+  init(_ attack: Int, _ health: Int)
+  {
+    self.attack = attack
+    self.health = health
+  }
+}
+
+class CardGame
+{
+  var creatures: [Creature]
+
+  init(_ creatures: [Creature])
+  {
+    self.creatures = creatures
+  }
+
+  // the arguments creature1 and creature2 are indices in the 'creatures array'
+  //
+  // method returns the index of the creature that won the fight
+  // returns -1 if there is no clear winner (both alive or both dead)
+  func combat(_ creature1: Int, _ creature2: Int) -> Int
+  {
+    let first = creatures[creature1]
+    let second = creatures[creature2]
+    hit(first, second)
+    hit(second, first)
+    let firstAlive = (first.health > 0)
+    let secondAlive = (second.health > 0)
+    if firstAlive == secondAlive
+    {
+      return -1
+    }
+    return firstAlive ? creature1 : creature2
+  }
+
+  internal func hit(_ attacker: Creature, _ other: Creature)
+  {
+    precondition(false, "this method needs to be overridden")
+  }
+}
+
+class TemporaryCardDamageGame : CardGame
+{
+  override func hit(_ attacker: Creature, _ other: Creature)
+  {
+    let oldHealth = other.health
+    other.health -= attacker.attack
+    if other.health > 0
+    {
+      other.health = oldHealth
+    }
+  }
+}
+
+class PermanentCardDamage : CardGame
+{
+  override func hit(_ attacker: Creature, _ other: Creature)
+  {
+    other.health -= attacker.attack
+  }
+}
+```
+<br></br>
+Template summary
+- Define an algorithm at a high level
+- Define constituent parts as abstract methods/properties
+- Inherit the algorithm class, providing necessary overrides
+<br></br>
 ###   3-12. Visitor
+    - Need to define a new operation on an entire class hierarchy
+      - E.g., make a document model printable to HTML/Markdown
+    - Do not want to keep modifying every class in the hierarchy
+    - Need access to the non-common aspects of classes in the hierarchy
+      - I.e., an extension method won't do
+    - Create an external component to handle rendering
+      - But avoid type checks
+    - Visitor
+      - A pattern where a component(visitor) is allowed to traverse the entire inheritance hierarchy. Implemented by propagating a single visit() method throughout the entire hierarchy.
+    - Dispatch
+      - Which function to call?
+      - Single dispatch: depends on name of request and type of receiver
+      - Double dispatch: depends on name of request and type of two receivers(Type of visitor, type of element being visited)
+<br></br>
+Visitor sample code
+```swift
+import Foundation
+import XCTest
+
+protocol ExpressionVisitor
+{
+  func accept(_ value: Value)
+  func accept(_ ae: AdditionExpression)
+  func accept(_ me: MultiplicationExpression)
+}
+
+protocol Expression
+{
+  func visit(_ ev: ExpressionVisitor)
+}
+
+class Value : Expression
+{
+  let value: Int
+  init(_ value: Int)
+  {
+    self.value = value
+  }
+  func visit(_ ev: ExpressionVisitor)
+  {
+    ev.accept(self)
+  }
+}
+
+class AdditionExpression : Expression
+{
+  let lhs, rhs: Expression
+  init(_ lhs: Expression, _ rhs: Expression)
+  {
+    self.lhs = lhs
+    self.rhs = rhs
+  }
+  func visit(_ ev: ExpressionVisitor)
+  {
+    ev.accept(self)
+  }
+}
+
+class MultiplicationExpression : Expression
+{
+  let lhs, rhs: Expression
+  init(_ lhs: Expression, _ rhs: Expression)
+  {
+    self.lhs = lhs
+    self.rhs = rhs
+  }
+  func visit(_ ev: ExpressionVisitor)
+  {
+    ev.accept(self)
+  }
+}
+
+class ExpressionPrinter :
+  ExpressionVisitor, CustomStringConvertible
+{
+  private var buffer = ""
+
+  func accept(_ value: Value)
+  {
+    buffer.append(String(value.value))
+  }
+
+  func accept(_ ae: AdditionExpression)
+  {
+    buffer.append("(")
+    ae.lhs.visit(self)
+    buffer.append("+")
+    ae.rhs.visit(self)
+    buffer.append(")")
+  }
+
+  func accept(_ me: MultiplicationExpression)
+  {
+    me.lhs.visit(self)
+    buffer.append("*")
+    me.rhs.visit(self)
+  }
+
+  var description: String
+  {
+    return buffer
+  }
+}
+```
+<br></br>
+Visitor summary
+- Propagate an accept(v: Visitor) method troughout the entire hierarchy
+- Create a visitor with visit(:Foo), Visit(:Bar), ... for each element in the hierarchy
+- Each accept() simply calls visitor.visit(self)
+<br></br>
+<br></br>
+## Creational Patterns Summary
+- Builder
+  - Separate component for when object  construction gets too complicated
+  - Can create mutually cooperating sub-builders
+  - Often has a fluent interface
+- Factories
+  - Factory method more expressive than initializer
+  - Factory can be an outside class or inner class; inner class has the benefit of accessing private members
+- Prototype
+  - Creation of object from an existing object
+  - Requires either explicit copying initializer or deep copy method
+- Singleton
+  - When you need to ensure jus a single instance exists
+  - Direct dependencies on a singleton are difficult to test(also difficult to refactor)
+  - Consider extracting interface or using dependency injection
+<br></br>
+## Structural Pattrens Summary
+- Adapter
+  - Converts the interface you get to the interface you need
+- Bridge
+  - Decouple abstraction from implementation
+- Composite
+  - Allows clients to treat individual objects and compostions of objects uniformly
+- Decorator
+  - Attach additional responsibilities to objects
+  - 'Inherit' from final classes or value types; emulate mutiple inheritance
+- Facade
+  - Provide a single unified interface over a set of interfaces
+- Flyweight
+  - Space saving technique
+  - Efficiently support very large numbers of similar objects
+- Proxy
+  - Provide a surrogate object that forwards calls to the real object while performing additional functions
+  - E.g., access control, communication, logging, etc. 
+<br></br>
+## Behavioral Pattrens Summary
+- Chain of Responsibility
+  - Allow components to process information/events in a chain
+  - Each element in the chain refers to next element; or
+  - Make a list and go trough it
+- Command
+  - Encapsulate a request into a separate object
+  - Good for audit, replay, undo/redo
+  - Part of CQS/CQRS(Qurey is also, effectively, a command)
+- Interpreter
+  - Transform textual input into object-oriented structures
+  - Used by interpreters, compilers, static analytics tools, etc.
+  - Compiler Theory is a separate branch of Computer Science
+- Iterator
+  - Provides an interface for accessing elements of an aggregate object
+  - Typically used implicitly via for..in..
+- Mediator
+  - Provides mediation services between objects
+  - Objects not necessarily aware of each other's presence
+  - E.g., message passing, chat room
+- Memento
+  - Yields tokens representing system states
+  - Tokens do not allow direct manipulation, but can be used in appropriate APIs
+- Observer
+  - Allows notification of listening components
+  - Uses the concept of an event
+  - Property observers built into the language
+- State
+  - We model systems by having one of a possible states and transitions between these states
+  - Such a system is called a state machine
+  - Special frameworks exist to orchestrate state machines
+- Strategy
+  - 'Outsource' part of an algorithm into separate implementations
+  - Can be selected at compile or runtime
+- Template Method
+  - Define the outline of the algorithm with details filled in by inheritors
+ - Visitor
+  - Enable type-safe traversal of data structures
+  - 'Double dispatch' requires each member of hierarchy to accept a visitor
